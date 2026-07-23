@@ -14,8 +14,8 @@ interface DashboardData {
   activeSubscriptions: number;
   pendingReports: number;
   totalBroadcasts: number;
-  topGenres: { genre: string; count: number }[];
-  topCountries: { country: string; count: number }[];
+  topGenres: { genre: { id: string; name: string; slug: string; emoji?: string } | null; count: number }[];
+  topCountries: { country: { id: string; name: string; code: string; flag?: string } | null; count: number }[];
 }
 
 const genreColors = [
@@ -234,8 +234,8 @@ export default function DashboardPage() {
           ) : (
             <div className="space-y-3">
               {data.topGenres.map((g, i) => (
-                <div key={g.genre} className="flex items-center gap-3">
-                  <span className="text-sm text-gray-400 w-28 truncate shrink-0">{g.genre}</span>
+                <div key={g.genre?.id ?? i} className="flex items-center gap-3">
+                  <span className="text-sm text-gray-400 w-28 truncate shrink-0">{g.genre?.name ?? "Noma'lum"}</span>
                   <div className="flex-1 h-6 rounded-lg bg-white/[0.03] overflow-hidden relative">
                     <div
                       className={`h-full rounded-lg bg-gradient-to-r ${genreColors[i % genreColors.length]} transition-all duration-700`}
@@ -256,9 +256,9 @@ export default function DashboardPage() {
           ) : (
             <div className="space-y-3">
               {data.topCountries.map((c, i) => (
-                <div key={c.country} className="flex items-center gap-3">
+                <div key={c.country?.id ?? i} className="flex items-center gap-3">
                   <div className={`w-2 h-2 rounded-full shrink-0 ${countryColors[i % countryColors.length]}`} />
-                  <span className="text-sm text-gray-300 flex-1">{c.country}</span>
+                  <span className="text-sm text-gray-300 flex-1">{c.country?.name ?? "Noma'lum"}</span>
                   <span className="text-sm font-semibold text-white">{formatNumber(c.count)}</span>
                 </div>
               ))}
