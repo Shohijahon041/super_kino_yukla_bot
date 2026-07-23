@@ -1,5 +1,15 @@
-import { IsString, IsNumber, IsOptional, MinLength } from 'class-validator';
+import { IsString, IsNumber, IsOptional, MinLength, IsEmail } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+
+export class AdminLoginDto {
+  @ApiProperty({ example: 'admin@cinemahub.ai' })
+  @IsEmail()
+  email: string;
+
+  @ApiProperty({ example: 'admin123' })
+  @IsString()
+  password: string;
+}
 
 export class TelegramLoginDto {
   @ApiProperty({ description: 'Telegram user ID', example: 123456789 })

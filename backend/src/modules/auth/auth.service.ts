@@ -212,6 +212,58 @@ export class AuthService {
     };
   }
 
+  async adminLogin(email: string, password: string): Promise<TokenPair & { user: any }> {
+    const adminEmail = this.configService.get<string>('ADMIN_EMAIL', 'admin@cinemahub.ai');
+    const adminPassword = this.configService.get<string>('ADMIN_PASSWORD', 'admin123');
+
+    if (email !== adminEmail || password !== adminPassword) {
+      throw new UnauthorizedException('Invalid admin credentials');
+    }
+
+    const adminRole = await this.prisma.role.findUnique({
+      where: { name: 'admin' },
+      include: { permissions: true },
+    });
+
+    if (!adminRole) {
+      throw new Error('Admin role not found in database');
+    }
+
+    let user = await this.prisma.user.findFirst({
+      where: { roleId: adminRole.id },
+      include: { role: { include: { permissions: true } } },
+    });
+
+    if (!user) {
+      user = await this.prisma.user.create({
+        data: {
+          telegramId: BigInt(0),
+          username: 'admin',
+          firstName: 'Admin',
+          roleId: adminRole.id,
+        },
+        include: { role: { include: { permissions: true } } },
+      });
+    }
+
+    const tokens = await this.generateTokenPair(user.id, user.role?.name ?? 'admin');
+    await this.createSession(user.id, tokens.refreshToken);
+
+    const permissions = user.role?.permissions?.map((rp) => `${rp.resource}:${rp.action}`) ?? [];
+
+    return {
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      user: {
+        id: user.id,
+        username: user.username,
+        firstName: user.firstName,
+        role: user.role?.name ?? 'admin',
+        permissions,
+      },
+    };
+  }
+
   async getProfile(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },

@@ -4,7 +4,6 @@ import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -32,8 +31,10 @@ export default function BroadcastsPage() {
   const { addToast } = useToast();
   const [broadcastList, setBroadcastList] = React.useState<Broadcast[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
   const [currentPage, setCurrentPage] = React.useState(1);
   const [totalPages, setTotalPages] = React.useState(1);
+  const [totalCount, setTotalCount] = React.useState(0);
   const [createDialog, setCreateDialog] = React.useState(false);
   const [form, setForm] = React.useState({
     title: "",
@@ -44,29 +45,33 @@ export default function BroadcastsPage() {
   });
   const [submitting, setSubmitting] = React.useState(false);
 
-  const fetchBroadcasts = React.useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await admin.getBroadcasts({ page: currentPage, limit: 10 });
-      setBroadcastList(response.data.data);
-      setTotalPages(response.data.totalPages);
-    } catch {
-      setBroadcastList([
-        { id: "1", title: "New Content Alert", message: "Check out the latest movies added this week!", type: "info", status: "sent", targetAudience: "all", sentAt: new Date().toISOString(), createdAt: new Date().toISOString(), sentCount: 15420 },
-        { id: "2", title: "Server Maintenance", message: "Scheduled maintenance on Sunday 2AM-4AM UTC.", type: "warning", status: "sent", targetAudience: "all", sentAt: new Date(Date.now() - 86400000).toISOString(), createdAt: new Date(Date.now() - 86400000).toISOString(), sentCount: 15420 },
-        { id: "3", title: "Premium Sale", message: "50% off premium subscription - Limited time!", type: "urgent", status: "scheduled", targetAudience: "free", scheduledAt: new Date(Date.now() + 86400000).toISOString(), createdAt: new Date(Date.now() - 172800000).toISOString() },
-        { id: "4", title: "Weekly Digest", message: "Your weekly watch recommendations are ready.", type: "info", status: "draft", targetAudience: "all", createdAt: new Date(Date.now() - 259200000).toISOString() },
-        { id: "5", title: "Holiday Special", message: "Enjoy our curated holiday movie collection!", type: "info", status: "sent", targetAudience: "all", sentAt: new Date(Date.now() - 345600000).toISOString(), createdAt: new Date(Date.now() - 345600000).toISOString(), sentCount: 12300 },
-      ]);
-      setTotalPages(2);
-    } finally {
-      setLoading(false);
-    }
-  }, [currentPage]);
-
   React.useEffect(() => {
+    let cancelled = false;
+    async function fetchBroadcasts() {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await admin.getBroadcasts({ page: currentPage, limit: 10 });
+        if (!cancelled) {
+          const payload = response.data as any;
+          setBroadcastList(payload.data);
+          setTotalPages(payload.totalPages);
+          setTotalCount(payload.total);
+        }
+      } catch {
+        if (!cancelled) {
+          setError("Broadcastlarni yuklashda xatolik yuz berdi. Keyinroq qayta urinib ko'ring.");
+          setBroadcastList([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
     fetchBroadcasts();
-  }, [fetchBroadcasts]);
+    return () => { cancelled = true; };
+  }, [currentPage]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,7 +81,7 @@ export default function BroadcastsPage() {
       addToast({ title: "Broadcast created", description: "Your broadcast has been created.", variant: "success" });
       setCreateDialog(false);
       setForm({ title: "", message: "", type: "info", targetAudience: "all", scheduledAt: "" });
-      fetchBroadcasts();
+      setCurrentPage(1);
     } catch {
       addToast({ title: "Error", description: "Failed to create broadcast.", variant: "destructive" });
     } finally {
@@ -85,29 +90,65 @@ export default function BroadcastsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Broadcasts</h1>
-          <p className="text-gray-400 mt-1">Send notifications to your users</p>
+          <h1 className="text-3xl font-bold tracking-tight">Broadcasts</h1>
+          <p className="text-gray-500 mt-1">Send notifications to your users</p>
         </div>
-        <Button onClick={() => setCreateDialog(true)}>New Broadcast</Button>
+        <Button variant="brand" onClick={() => setCreateDialog(true)}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="mr-1.5">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+          New Broadcast
+        </Button>
       </div>
 
-      <Card className="bg-gray-900 border-gray-800">
-        <CardHeader>
-          <CardTitle>Broadcast History</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden card-glow">
+        <div className="p-4 border-b border-white/[0.04]">
+          <div className="flex items-center gap-3">
+            <div className="flex-1">
+              <h2 className="text-sm font-medium text-gray-400">Broadcast History</h2>
+            </div>
+            {!loading && !error && (
+              <span className="text-sm text-gray-500">{totalCount} broadcasts</span>
+            )}
+          </div>
+        </div>
+
+        <div className="p-0">
           {loading ? (
-            <div className="flex items-center justify-center h-32">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+            <div className="flex items-center justify-center h-40">
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-8 h-8 rounded-xl gradient-brand animate-pulse-soft" />
+                <p className="text-sm text-gray-500">Yuklanmoqda...</p>
+              </div>
+            </div>
+          ) : error ? (
+            <div className="flex flex-col items-center justify-center h-40 gap-3">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-red-400">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              <p className="text-sm text-red-400">{error}</p>
+              <Button variant="outline" size="sm" onClick={() => { setError(null); setLoading(true); }}>
+                Qayta urinish
+              </Button>
+            </div>
+          ) : broadcastList.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-40 gap-3">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-gray-600">
+                <path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3zm-8.27 4a2 2 0 0 1-3.46 0" />
+              </svg>
+              <p className="text-sm text-gray-500">Hech narsa topilmadi</p>
             </div>
           ) : (
             <>
               <Table>
                 <TableHeader>
-                  <TableRow>
+                  <TableRow className="border-white/[0.04] hover:bg-transparent">
                     <TableHead>Title</TableHead>
                     <TableHead>Message</TableHead>
                     <TableHead>Type</TableHead>
@@ -120,7 +161,7 @@ export default function BroadcastsPage() {
                 <TableBody>
                   {broadcastList.map((broadcast) => (
                     <TableRow key={broadcast.id}>
-                      <TableCell className="font-medium">{broadcast.title}</TableCell>
+                      <TableCell className="font-medium text-white">{broadcast.title}</TableCell>
                       <TableCell className="max-w-xs truncate text-gray-400">
                         {broadcast.message}
                       </TableCell>
@@ -144,7 +185,7 @@ export default function BroadcastsPage() {
                       <TableCell className="text-gray-400">
                         {broadcast.sentCount?.toLocaleString() || "-"}
                       </TableCell>
-                      <TableCell className="text-gray-400">
+                      <TableCell className="text-gray-500 text-sm">
                         {formatDate(broadcast.sentAt || broadcast.scheduledAt || broadcast.createdAt)}
                       </TableCell>
                     </TableRow>
@@ -152,9 +193,9 @@ export default function BroadcastsPage() {
                 </TableBody>
               </Table>
 
-              <div className="flex items-center justify-between mt-4">
-                <p className="text-sm text-gray-400">
-                  Page {currentPage} of {totalPages}
+              <div className="flex items-center justify-between p-4 border-t border-white/[0.04]">
+                <p className="text-sm text-gray-500">
+                  Page {currentPage} / {totalPages}
                 </p>
                 <div className="flex items-center gap-2">
                   <Button
@@ -177,8 +218,8 @@ export default function BroadcastsPage() {
               </div>
             </>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       <Dialog open={createDialog} onOpenChange={setCreateDialog}>
         <DialogContent className="max-w-lg">

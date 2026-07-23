@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { cn } from "@/lib/utils";
 import { formatNumber } from "@/lib/utils";
 
 interface StatsCardsProps {
@@ -67,13 +68,13 @@ export function StatsCards({
   totalViews = 0,
   newUsersToday = 0,
 }: StatsCardsProps) {
-  const cards = [
+  const cards: { title: string; value: string; type: string; change: string; changeType: string; gradient: string; iconColor: string }[] = [
     {
       title: "Filmlar",
       value: formatNumber(totalMovies),
       type: "movies",
       change: "+12%",
-      changeType: "positive" as const,
+      changeType: "positive",
       gradient: "from-violet-500/10 to-purple-500/5",
       iconColor: "text-violet-400",
     },
@@ -82,7 +83,7 @@ export function StatsCards({
       value: formatNumber(totalSeries),
       type: "series",
       change: "+8%",
-      changeType: "positive" as const,
+      changeType: "positive",
       gradient: "from-blue-500/10 to-cyan-500/5",
       iconColor: "text-blue-400",
     },
@@ -91,7 +92,7 @@ export function StatsCards({
       value: formatNumber(totalUsers),
       type: "users",
       change: `+${formatNumber(newUsersToday)} today`,
-      changeType: "positive" as const,
+      changeType: "positive",
       gradient: "from-emerald-500/10 to-teal-500/5",
       iconColor: "text-emerald-400",
     },
@@ -100,7 +101,7 @@ export function StatsCards({
       value: formatNumber(activeToday),
       type: "active",
       change: "+23%",
-      changeType: "positive" as const,
+      changeType: "positive",
       gradient: "from-amber-500/10 to-orange-500/5",
       iconColor: "text-amber-400",
     },
@@ -109,7 +110,7 @@ export function StatsCards({
       value: formatNumber(totalViews),
       type: "views",
       change: "+18%",
-      changeType: "positive" as const,
+      changeType: "positive",
       gradient: "from-pink-500/10 to-rose-500/5",
       iconColor: "text-pink-400",
     },
@@ -118,7 +119,7 @@ export function StatsCards({
       value: formatNumber(newUsersToday),
       type: "newUsers",
       change: "today",
-      changeType: "neutral" as const,
+      changeType: "neutral",
       gradient: "from-cyan-500/10 to-sky-500/5",
       iconColor: "text-cyan-400",
     },
@@ -150,5 +151,3 @@ export function StatsCards({
     </div>
   );
 }
-
-import { cn } from "@/lib/utils";

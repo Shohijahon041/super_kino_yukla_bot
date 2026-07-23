@@ -19,7 +19,7 @@ import {
 } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
-import { TelegramLoginDto, RefreshTokenDto, AuthResponseDto } from './dto/auth.dto';
+import { TelegramLoginDto, RefreshTokenDto, AuthResponseDto, AdminLoginDto } from './dto/auth.dto';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -52,6 +52,32 @@ export class AuthController {
     }
 
     const authResult = await this.authService.login(telegramData, ip, userAgent);
+
+    return {
+      accessToken: authResult.accessToken,
+      refreshToken: authResult.refreshToken,
+      user: authResult.user,
+    };
+  }
+
+  @Post('admin-login')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Admin login with email and password',
+    description: 'Authenticate admin user using email and password credentials from environment variables.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Admin authentication successful',
+    type: AuthResponseDto,
+  })
+  @ApiResponse({ status: 401, description: 'Invalid admin credentials' })
+  async adminLogin(@Body() dto: AdminLoginDto): Promise<AuthResponseDto> {
+    if (!dto.email || !dto.password) {
+      throw new BadRequestException('Email and password are required');
+    }
+
+    const authResult = await this.authService.adminLogin(dto.email, dto.password);
 
     return {
       accessToken: authResult.accessToken,

@@ -23,8 +23,8 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { MoviesService } from './movies.service';
-import { PaginationDto } from '../../common/dto/pagination.dto';
 import { CreateMovieDto, UpdateMovieDto, FilterMovieDto } from './dto/movies.dto';
+import { PaginationDto } from '../../common/dto/pagination.dto';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/guards/roles.guard';
 
@@ -51,11 +51,8 @@ export class MoviesController {
   @ApiQuery({ name: 'ageRating', required: false, type: String, enum: ['G', 'PG', 'PG-13', 'R', 'NC-17', '18+'] })
   @ApiQuery({ name: 'isFeatured', required: false, type: Boolean })
   @ApiResponse({ status: 200, description: 'Movies retrieved successfully' })
-  async findAll(
-    @Query() paginationDto: PaginationDto,
-    @Query() filterDto: FilterMovieDto,
-  ) {
-    return this.moviesService.findAll(paginationDto, filterDto);
+  async findAll(@Query() dto: FilterMovieDto) {
+    return this.moviesService.findAll(dto, dto);
   }
 
   @Get('trending')

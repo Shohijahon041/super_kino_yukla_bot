@@ -16,6 +16,7 @@ import {
 } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { PaginationDto } from '../../../common/dto/pagination.dto';
 
 export class CreateMovieDto {
   @ApiProperty({ description: 'Movie title', example: 'Inception' })
@@ -312,7 +313,7 @@ export class UpdateMovieDto {
   isActive?: boolean;
 }
 
-export class FilterMovieDto {
+export class FilterMovieDto extends PaginationDto {
   @ApiPropertyOptional({ description: 'Filter by genre ID' })
   @IsOptional()
   @IsString()
@@ -351,17 +352,6 @@ export class FilterMovieDto {
   @Type(() => Boolean)
   @IsBoolean()
   isFeatured?: boolean;
-
-  @ApiPropertyOptional({ description: 'Sort by field', default: 'createdAt', enum: ['createdAt', 'year', 'rating', 'viewCount', 'title'] })
-  @IsOptional()
-  @IsString()
-  @IsIn(['createdAt', 'year', 'rating', 'viewCount', 'title'])
-  sortBy?: string;
-
-  @ApiPropertyOptional({ enum: ['asc', 'desc'], default: 'desc' })
-  @IsOptional()
-  @IsIn(['asc', 'desc'])
-  sortOrder?: 'asc' | 'desc';
 }
 
 export class MovieResponseDto {

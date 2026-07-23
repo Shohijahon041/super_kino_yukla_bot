@@ -9,6 +9,14 @@ async function bootstrap() {
     cors: true,
   });
 
+  const origStringify = JSON.stringify;
+  (JSON as any).stringify = function (value: any, replacer?: any, space?: number) {
+    return origStringify(value, (key: string, val: any) => {
+      if (typeof val === 'bigint') return val.toString();
+      return replacer ? replacer(key, val) : val;
+    }, space);
+  };
+
   app.use(helmet());
   app.setGlobalPrefix('api/v1');
   

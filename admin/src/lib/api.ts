@@ -42,7 +42,8 @@ export interface LoginCredentials {
 }
 
 export interface LoginResponse {
-  token: string;
+  accessToken: string;
+  refreshToken: string;
   user: AdminUser;
 }
 
@@ -115,15 +116,20 @@ export interface Series {
 
 export interface User {
   id: string;
-  name: string;
-  email: string;
+  telegramId?: string;
+  username: string;
+  firstName?: string;
+  lastName?: string;
   avatar?: string;
-  role: string;
-  status: "active" | "banned" | "muted";
+  role: { id: string; name: string } | string;
+  isActive?: boolean;
+  isBanned?: boolean;
+  isMuted?: boolean;
+  isPremium?: boolean;
+  xp?: number;
+  level?: number;
+  coins?: number;
   createdAt: string;
-  lastLogin?: string;
-  watchHistory?: number;
-  watchlist?: number;
 }
 
 export interface Genre {
@@ -176,13 +182,6 @@ export interface Activity {
   createdAt: string;
 }
 
-export interface Analytics {
-  daily: { date: string; views: number; users: number }[];
-  monthly: { month: string; views: number; users: number }[];
-  topContent: { title: string; views: number; type: string }[];
-  userGrowth: { date: string; count: number }[];
-}
-
 export interface PaginatedResponse<T> {
   data: T[];
   total: number;
@@ -191,56 +190,14 @@ export interface PaginatedResponse<T> {
   totalPages: number;
 }
 
-export interface Report {
-  id: string;
-  type: string;
-  content: string;
-  reason: string;
-  status: "pending" | "reviewed" | "resolved";
-  reportedBy: string;
-  contentId: string;
-  contentType: string;
-  createdAt: string;
-  reviewedAt?: string;
-}
-
-export interface Notification {
-  id: string;
-  title: string;
-  message: string;
-  type: "info" | "success" | "warning" | "error";
-  read: boolean;
-  createdAt: string;
-}
-
-export interface AdminAction {
-  id: string;
-  action: string;
-  details: string;
-  adminId: string;
-  adminName: string;
-  targetId?: string;
-  targetType?: string;
-  createdAt: string;
-}
-
-export interface HealthStatus {
-  status: string;
-  uptime: number;
-  memory: { used: number; total: number };
-  database: string;
-  api: string;
-  version: string;
-}
-
 export const auth = {
   login: (credentials: LoginCredentials) =>
-    api.post<LoginResponse>("/auth/login", credentials),
+    api.post<LoginResponse>("/auth/admin-login", credentials),
   getProfile: () => api.get<AdminUser>("/auth/profile"),
 };
 
 export const movies = {
-  getMovies: (params?: { page?: number; limit?: number; search?: string; genre?: string; year?: number; status?: string }) =>
+  getMovies: (params?: { page?: number; limit?: number; search?: string; sortBy?: string; sortOrder?: string; genre?: string; year?: number; country?: string; language?: string; quality?: string; ageRating?: string; isFeatured?: boolean }) =>
     api.get<PaginatedResponse<Movie>>("/movies", { params }),
   getMovie: (id: string) => api.get<Movie>(`/movies/${id}`),
   createMovie: (data: Partial<Movie>) => api.post<Movie>("/movies", data),
@@ -259,7 +216,7 @@ export const series = {
 };
 
 export const users = {
-  getUsers: (params?: { page?: number; limit?: number; search?: string; status?: string }) =>
+  getUsers: (params?: { page?: number; limit?: number; query?: string; status?: string }) =>
     api.get<PaginatedResponse<User>>("/users", { params }),
   getUser: (id: string) => api.get<User>(`/users/${id}`),
   banUser: (id: string) => api.put(`/users/${id}/ban`),
@@ -267,18 +224,13 @@ export const users = {
 };
 
 export const stats = {
-  getDashboardStats: () => api.get<DashboardStats>("/stats/dashboard"),
-  getAnalytics: (params?: { period?: string }) =>
-    api.get<Analytics>("/stats/analytics", { params }),
+  getDashboardStats: () => api.get<DashboardStats>("/admin/dashboard"),
 };
 
 export const admin = {
-  getDashboard: () => api.get<DashboardStats>("/admin/dashboard"),
   broadcast: (data: Partial<Broadcast>) => api.post<Broadcast>("/admin/broadcast", data),
   getBroadcasts: (params?: { page?: number; limit?: number }) =>
     api.get<PaginatedResponse<Broadcast>>("/admin/broadcasts", { params }),
-  getAdminActions: (params?: { page?: number; limit?: number }) =>
-    api.get<PaginatedResponse<AdminAction>>("/admin/actions", { params }),
 };
 
 export const genres = {
@@ -306,22 +258,8 @@ export const search = {
   global: (query: string) => api.get("/search", { params: { q: query } }),
 };
 
-export const notifications = {
-  getNotifications: (params?: { page?: number; unread?: boolean }) =>
-    api.get<PaginatedResponse<Notification>>("/notifications", { params }),
-  markAsRead: (id: string) => api.put(`/notifications/${id}/read`),
-  markAllAsRead: () => api.put("/notifications/read-all"),
-};
-
-export const reports = {
-  getReports: (params?: { page?: number; status?: string }) =>
-    api.get<PaginatedResponse<Report>>("/reports", { params }),
-  updateReportStatus: (id: string, status: string) =>
-    api.put(`/reports/${id}`, { status }),
-};
-
 export const health = {
-  getHealth: () => api.get<HealthStatus>("/health"),
+  getHealth: () => api.get("/health"),
 };
 
 export default api;
