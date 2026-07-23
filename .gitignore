@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.env
+.env.local
+.env.production
+*.session
+*.session-journal
+*.pyc
+__pycache__/
+.DS_Store
+coverage/
+.next/
+nuxt/
+.turbo/
+*.log
