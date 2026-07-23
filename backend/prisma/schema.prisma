@@ -120,6 +120,8 @@ model Movie {
   backdrop        String?
   trailer         String?
   telegramFileId  String?
+  channelMessageId Int?
+  channelId       BigInt?
   cloudUrl        String?
   
   // Technical

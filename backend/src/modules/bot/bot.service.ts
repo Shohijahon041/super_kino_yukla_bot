@@ -361,6 +361,12 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
       await this.handleGetByCode(ctx, code);
     });
 
+    this.bot.action(/^dl_(\d+)$/, async (ctx) => {
+      await ctx.answerCbQuery('📥 Film yuborilmoqda...');
+      const code = parseInt(ctx.match[1], 10);
+      await this.handleDownload(ctx, code);
+    });
+
     this.bot.action(/^cat_(.+)$/, async (ctx) => {
       await ctx.answerCbQuery();
       const genreSlug = ctx.match[1];
@@ -957,7 +963,7 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
       [
         Markup.button.callback(
           '⬇️ Olish',
-          `get_${movie.code}`,
+          `dl_${movie.code}`,
         ),
         Markup.button.callback(
           '❤️ Sevimli',
@@ -1101,6 +1107,54 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
         `❌ <b>#${code}</b> kodli film topilmadi.`,
         this.backButton(),
       );
+    }
+  }
+
+  private async handleDownload(ctx: Context, code: number) {
+    try {
+      const movie = await this.moviesService.findByCode(code);
+      const caption = `🎬 <b>${this.escapeHtml(movie.title)}</b>` +
+        (movie.year ? ` (${movie.year})` : '');
+
+      if (movie.channelMessageId && movie.channelId) {
+        try {
+          await ctx.telegram.copyMessage(
+            ctx.chat!.id,
+            String(movie.channelId),
+            movie.channelMessageId,
+            { caption, parse_mode: 'HTML' },
+          );
+          return;
+        } catch (copyErr: any) {
+          this.logger.warn(`copyMessage failed for code ${code}: ${copyErr.message}`);
+        }
+      }
+
+      if (movie.telegramFileId) {
+        try {
+          await ctx.replyWithVideo(
+            movie.telegramFileId as any,
+            { caption, parse_mode: 'HTML' },
+          );
+          return;
+        } catch (videoErr: any) {
+          this.logger.warn(`sendVideo failed for code ${code}: ${videoErr.message}`);
+        }
+        try {
+          await ctx.replyWithDocument(
+            movie.telegramFileId as any,
+            { caption, parse_mode: 'HTML' },
+          );
+          return;
+        } catch (docErr: any) {
+          this.logger.error(`sendDocument also failed for code ${code}: ${docErr.message}`);
+        }
+      }
+
+      await ctx.reply('❌ Bu film fayli hozircha mavjud emas.');
+    } catch (error: any) {
+      this.logger.error(`Download error: ${error.message}`);
+      await ctx.reply('❌ Film yuklab olishda xatolik yuz berdi.');
     }
   }
 
