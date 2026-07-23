@@ -236,6 +236,8 @@ model Episode {
   // Media
   poster          String?
   telegramFileId  String?
+  channelMessageId Int?
+  channelId       BigInt?
   cloudUrl        String?
   quality         String?
   fileSize        BigInt?

@@ -29,7 +29,7 @@ function TabsList({ className, children, ...props }: React.HTMLAttributes<HTMLDi
   return (
     <div
       className={cn(
-        "inline-flex h-9 items-center justify-center rounded-lg bg-gray-800 p-1 text-gray-400",
+        "inline-flex h-10 items-center justify-center rounded-xl bg-white/[0.03] border border-white/[0.06] p-1 text-gray-500",
         className
       )}
       {...props}
@@ -50,8 +50,10 @@ function TabsTrigger({ className, value, ...props }: TabsTriggerProps) {
   return (
     <button
       className={cn(
-        "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-sm font-medium ring-offset-gray-900 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
-        isActive ? "bg-gray-900 text-white shadow" : "text-gray-400 hover:text-white",
+        "inline-flex items-center justify-center whitespace-nowrap rounded-lg px-4 py-1.5 text-sm font-medium transition-all duration-200 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-40",
+        isActive
+          ? "bg-white/10 text-white shadow-sm"
+          : "text-gray-500 hover:text-gray-300 hover:bg-white/[0.03]",
         className
       )}
       onClick={() => context.setActiveTab(value)}
@@ -70,10 +72,7 @@ function TabsContent({ className, value, ...props }: TabsContentProps) {
   if (context.activeTab !== value) return null;
   return (
     <div
-      className={cn(
-        "mt-2 ring-offset-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2",
-        className
-      )}
+      className={cn("mt-4 animate-fade-in", className)}
       {...props}
     />
   );

@@ -49,33 +49,44 @@ export function useToast() {
 
 function ToastContainer({ toasts, removeToast }: { toasts: Toast[]; removeToast: (id: string) => void }) {
   return (
-    <div className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 max-w-sm w-full">
-      {toasts.map((toast) => (
-        <div
-          key={toast.id}
-          className={cn(
-            "rounded-xl border p-4 shadow-lg animate-in slide-in-from-right-full bg-gray-900",
-            toast.variant === "destructive" && "border-red-500/50",
-            toast.variant === "success" && "border-emerald-500/50",
-            !toast.variant && "border-gray-700"
-          )}
-        >
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <p className="text-sm font-semibold">{toast.title}</p>
-              {toast.description && (
-                <p className="text-sm text-gray-400 mt-1">{toast.description}</p>
-              )}
+    <div className="fixed bottom-6 right-6 z-[100] flex flex-col gap-3 max-w-sm w-full">
+      {toasts.map((toast) => {
+        const icons: Record<string, string> = {
+          success: "\u2705",
+          destructive: "\u274C",
+          default: "\u2139\uFE0F",
+        };
+        return (
+          <div
+            key={toast.id}
+            className={cn(
+              "rounded-2xl border p-4 shadow-elevated-lg animate-slide-up backdrop-blur-xl",
+              "bg-[#0c1429]/95",
+              toast.variant === "destructive" && "border-red-500/20",
+              toast.variant === "success" && "border-emerald-500/20",
+              !toast.variant && "border-white/[0.08]"
+            )}
+          >
+            <div className="flex items-start gap-3">
+              <span className="text-lg leading-none mt-0.5">{icons[toast.variant || "default"]}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-white">{toast.title}</p>
+                {toast.description && (
+                  <p className="text-sm text-gray-400 mt-0.5">{toast.description}</p>
+                )}
+              </div>
+              <button
+                onClick={() => removeToast(toast.id)}
+                className="text-gray-500 hover:text-white transition-colors shrink-0 rounded-lg hover:bg-white/5 p-1"
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path d="M10.5 3.5L3.5 10.5M3.5 3.5l7 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
+              </button>
             </div>
-            <button
-              onClick={() => removeToast(toast.id)}
-              className="text-gray-400 hover:text-white ml-2"
-            >
-              ×
-            </button>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

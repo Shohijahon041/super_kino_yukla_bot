@@ -4,7 +4,6 @@ import * as React from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -75,21 +74,11 @@ export default function MoviesPage() {
     if (!deleteDialog.movie) return;
     try {
       await movies.deleteMovie(deleteDialog.movie.id);
-      addToast({ title: "Movie deleted", description: `"${deleteDialog.movie.title}" has been deleted.`, variant: "success" });
+      addToast({ title: "Film o'chirildi", description: `"${deleteDialog.movie.title}" muvaffaqiyatli o'chirildi.`, variant: "success" });
       setDeleteDialog({ open: false, movie: null });
       fetchMovies();
     } catch {
-      addToast({ title: "Error", description: "Failed to delete movie.", variant: "destructive" });
-    }
-  };
-
-  const handleBulkExport = async () => {
-    if (selectedMovies.length === 0) return;
-    try {
-      await movies.bulkExport(selectedMovies);
-      addToast({ title: "Export started", description: "Your export is being prepared.", variant: "success" });
-    } catch {
-      addToast({ title: "Error", description: "Export failed.", variant: "destructive" });
+      addToast({ title: "Xatolik", description: "Filmni o'chirishda xatolik yuz berdi.", variant: "destructive" });
     }
   };
 
@@ -101,80 +90,100 @@ export default function MoviesPage() {
     }
   };
 
+  const statusBadge = (status: string) => {
+    const map: Record<string, "success" | "warning" | "secondary" | "info"> = {
+      published: "success",
+      draft: "warning",
+      archived: "secondary",
+    };
+    return map[status] || "secondary";
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Movies</h1>
-          <p className="text-gray-400 mt-1">Manage your movie collection</p>
+          <h1 className="text-3xl font-bold tracking-tight">Filmlar</h1>
+          <p className="text-gray-500 mt-1">Film kollektsiyasini boshqarish</p>
         </div>
         <div className="flex items-center gap-2">
           {selectedMovies.length > 0 && (
-            <Button variant="outline" onClick={handleBulkExport}>
-              Export ({selectedMovies.length})
+            <Button variant="outline" size="sm">
+              Eksport ({selectedMovies.length})
             </Button>
           )}
           <Link href="/movies/new">
-            <Button>Add Movie</Button>
+            <Button variant="brand">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="mr-1.5">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              Film Qo'shish
+            </Button>
           </Link>
         </div>
       </div>
 
-      <Card className="bg-gray-900 border-gray-800">
-        <CardHeader>
-          <div className="flex items-center gap-4">
-            <div className="flex-1">
+      <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden card-glow">
+        <div className="p-4 border-b border-white/[0.04]">
+          <div className="flex items-center gap-3">
+            <div className="flex-1 relative">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
               <Input
-                placeholder="Search movies..."
+                placeholder="Film qidirish..."
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="max-w-sm"
+                className="pl-9 max-w-sm"
               />
             </div>
             <Select
               options={[
-                { value: "published", label: "Published" },
-                { value: "draft", label: "Draft" },
-                { value: "archived", label: "Archived" },
+                { value: "published", label: "Nashr etilgan" },
+                { value: "draft", label: "Qoralama" },
+                { value: "archived", label: "Arxivlangan" },
               ]}
-              placeholder="All Statuses"
+              placeholder="Barcha holatlar"
               value={filterStatus}
               onChange={(e) => {
                 setFilterStatus(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-40"
+              className="w-44"
             />
           </div>
-        </CardHeader>
-        <CardContent>
+        </div>
+
+        <div className="p-0">
           {loading ? (
-            <div className="flex items-center justify-center h-32">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+            <div className="flex items-center justify-center h-40">
+              <div className="w-8 h-8 rounded-xl gradient-brand animate-pulse-soft" />
             </div>
           ) : (
             <>
               <Table>
                 <TableHeader>
-                  <TableRow>
+                  <TableRow className="border-white/[0.04] hover:bg-transparent">
                     <TableHead className="w-12">
                       <input
                         type="checkbox"
                         checked={selectedMovies.length === movieList.length && movieList.length > 0}
                         onChange={toggleSelectAll}
-                        className="rounded border-gray-700 bg-gray-800"
+                        className="rounded-lg border-gray-600 bg-gray-800 accent-brand-500"
                       />
                     </TableHead>
-                    <TableHead>Title</TableHead>
-                    <TableHead>Year</TableHead>
-                    <TableHead>Rating</TableHead>
-                    <TableHead>Views</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead>Film</TableHead>
+                    <TableHead>Yil</TableHead>
+                    <TableHead>Reyting</TableHead>
+                    <TableHead>Ko'rishlar</TableHead>
+                    <TableHead>Holat</TableHead>
+                    <TableHead>Sana</TableHead>
+                    <TableHead className="text-right">Amallar</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -191,43 +200,59 @@ export default function MoviesPage() {
                               setSelectedMovies(selectedMovies.filter((id) => id !== movie.id));
                             }
                           }}
-                          className="rounded border-gray-700 bg-gray-800"
+                          className="rounded-lg border-gray-600 bg-gray-800 accent-brand-500"
                         />
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-14 bg-gray-800 rounded flex items-center justify-center text-xs">
-                            🎬
+                          <div className="w-10 h-14 rounded-lg bg-gradient-to-br from-brand-500/20 to-purple-500/10 flex items-center justify-center text-xs border border-brand-500/10 shrink-0">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-brand-400">
+                              <rect x="2" y="2" width="20" height="20" rx="2.18" />
+                              <line x1="7" y1="2" x2="7" y2="22" />
+                              <line x1="17" y1="2" x2="17" y2="22" />
+                              <line x1="2" y1="12" x2="22" y2="12" />
+                            </svg>
                           </div>
                           <div>
-                            <p className="font-medium">{movie.title}</p>
+                            <p className="font-medium text-white">{movie.title}</p>
                             <p className="text-xs text-gray-500">{movie.genres?.[0]?.name || "N/A"}</p>
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>{movie.year}</TableCell>
+                      <TableCell className="text-gray-400">{movie.year}</TableCell>
                       <TableCell>
-                        <span className="text-amber-400">⭐ {movie.rating}</span>
+                        <span className="inline-flex items-center gap-1 text-amber-400 font-medium">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26" />
+                          </svg>
+                          {movie.rating}
+                        </span>
                       </TableCell>
-                      <TableCell>{formatNumber(movie.views || 0)}</TableCell>
+                      <TableCell className="text-gray-400 font-medium">{formatNumber(movie.views || 0)}</TableCell>
                       <TableCell>
-                        <Badge className={getStatusColor(movie.status)}>{movie.status}</Badge>
+                        <Badge variant={statusBadge(movie.status)}>{movie.status}</Badge>
                       </TableCell>
-                      <TableCell className="text-gray-400">{formatDate(movie.createdAt)}</TableCell>
+                      <TableCell className="text-gray-500 text-sm">{formatDate(movie.createdAt)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
                           <Link href={`/movies/${movie.id}/edit`}>
-                            <Button variant="ghost" size="sm">
-                              Edit
+                            <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                              </svg>
                             </Button>
                           </Link>
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="text-red-400 hover:text-red-300"
+                            className="text-gray-500 hover:text-red-400"
                             onClick={() => setDeleteDialog({ open: true, movie })}
                           >
-                            Delete
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                              <polyline points="3,6 5,6 21,6" />
+                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                            </svg>
                           </Button>
                         </div>
                       </TableCell>
@@ -236,9 +261,9 @@ export default function MoviesPage() {
                 </TableBody>
               </Table>
 
-              <div className="flex items-center justify-between mt-4">
-                <p className="text-sm text-gray-400">
-                  Page {currentPage} of {totalPages}
+              <div className="flex items-center justify-between p-4 border-t border-white/[0.04]">
+                <p className="text-sm text-gray-500">
+                  Sahifa {currentPage} / {totalPages}
                 </p>
                 <div className="flex items-center gap-2">
                   <Button
@@ -247,7 +272,7 @@ export default function MoviesPage() {
                     onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                     disabled={currentPage === 1}
                   >
-                    Previous
+                    Oldingi
                   </Button>
                   <Button
                     variant="outline"
@@ -255,29 +280,29 @@ export default function MoviesPage() {
                     onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                     disabled={currentPage === totalPages}
                   >
-                    Next
+                    Keyingi
                   </Button>
                 </div>
               </div>
             </>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       <Dialog open={deleteDialog.open} onOpenChange={(open) => setDeleteDialog({ ...deleteDialog, open })}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete Movie</DialogTitle>
+            <DialogTitle>Filmi O'chirish</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete &quot;{deleteDialog.movie?.title}&quot;? This action cannot be undone.
+              &quot;{deleteDialog.movie?.title}&quot; ni o&apos;chirishni xohlaysizmi? Bu amal bekor qilib bo&apos;lmaydi.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteDialog({ open: false, movie: null })}>
-              Cancel
+              Bekor qilish
             </Button>
             <Button variant="destructive" onClick={handleDelete}>
-              Delete
+              O'chirish
             </Button>
           </DialogFooter>
         </DialogContent>

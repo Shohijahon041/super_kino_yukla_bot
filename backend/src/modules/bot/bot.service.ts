@@ -106,6 +106,32 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
       this.logger.error(`Failed to verify bot: ${error.message}`);
     }
 
+    try {
+      await this.bot.telegram.setMyCommands([
+        { command: 'start', description: '🏠 Bosh menyu' },
+        { command: 'search', description: '🔍 Film qidirish' },
+        { command: 'random', description: '🎲 Tasodifiy film' },
+        { command: 'new', description: '🆕 Yangi filmlar' },
+        { command: 'top', description: '⭐ Top reyting' },
+        { command: 'trending', description: '🔥 Trend filmlar' },
+        { command: 'series', description: '📺 Seryarlar' },
+        { command: 'categories', description: '📂 Kategoriyalar' },
+        { command: 'profile', description: '👤 Mening profilim' },
+        { command: 'favorites', description: '❤️ Sevimlilar' },
+        { command: 'history', description: '📜 Tarix' },
+        { command: 'bonus', description: '🎁 Kundalik bonus' },
+        { command: 'missions', description: '🎯 Missiyalar' },
+        { command: 'spin', description: '🎡 Spin Wheel' },
+        { command: 'leaderboard', description: '🏆 Reyting' },
+        { command: 'premium', description: '💎 Premium' },
+        { command: 'lang', description: '🌐 Tilni o\'zgartirish' },
+        { command: 'help', description: 'ℹ️ Yordam' },
+      ]);
+      this.logger.log('Bot commands registered in Telegram');
+    } catch (error) {
+      this.logger.warn(`Failed to set bot commands: ${error.message}`);
+    }
+
     this.bot.launch({ dropPendingUpdates: true }).then(() => {
       this.logger.log(`Bot launched with long polling`);
     }).catch((error) => {
@@ -270,6 +296,11 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
       await this.sendCategoryList(ctx);
     });
 
+    this.bot.action('help', async (ctx) => {
+      await ctx.answerCbQuery();
+      await this.sendHelp(ctx);
+    });
+
     this.bot.action('new_movies', async (ctx) => {
       await ctx.answerCbQuery();
       await this.handleNewMovies(ctx);
@@ -365,6 +396,12 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
       await ctx.answerCbQuery('📥 Film yuborilmoqda...');
       const code = parseInt(ctx.match[1], 10);
       await this.handleDownload(ctx, code);
+    });
+
+    this.bot.action(/^epdl_(.+)$/, async (ctx) => {
+      await ctx.answerCbQuery('📥 Qism yuborilmoqda...');
+      const episodeId = ctx.match[1];
+      await this.handleEpisodeDownload(ctx, episodeId);
     });
 
     this.bot.action(/^cat_(.+)$/, async (ctx) => {
@@ -1158,6 +1195,48 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  private async handleEpisodeDownload(ctx: Context, episodeId: string) {
+    try {
+      const episode = await this.seriesService.getEpisode(episodeId) as any;
+      const series = episode.season?.series;
+      const caption = `📺 ${series?.title || 'Serial'} · S${episode.season?.number || '?'}E${episode.number}`;
+
+      if (episode.channelMessageId && episode.channelId) {
+        try {
+          await ctx.telegram.copyMessage(
+            ctx.chat!.id,
+            String(episode.channelId),
+            episode.channelMessageId,
+            { caption, parse_mode: 'HTML' },
+          );
+          return;
+        } catch (copyErr: any) {
+          this.logger.warn(`copyMessage failed for episode ${episodeId}: ${copyErr.message}`);
+        }
+      }
+
+      if (episode.telegramFileId) {
+        try {
+          await ctx.replyWithVideo(episode.telegramFileId as any, { caption });
+          return;
+        } catch (videoErr: any) {
+          this.logger.warn(`sendVideo failed for episode ${episodeId}: ${videoErr.message}`);
+        }
+        try {
+          await ctx.replyWithDocument(episode.telegramFileId as any, { caption });
+          return;
+        } catch (docErr: any) {
+          this.logger.error(`sendDocument also failed for episode ${episodeId}: ${docErr.message}`);
+        }
+      }
+
+      await ctx.reply('❌ Bu qism fayli hozircha mavjud emas.');
+    } catch (error: any) {
+      this.logger.error(`Episode download error: ${error.message}`);
+      await ctx.reply('❌ Qismni yuklab olishda xatolik yuz berdi.');
+    }
+  }
+
   private async handleSeriesDetail(ctx: Context, seriesId: string) {
     try {
       const series = await this.seriesService.findById(seriesId);
@@ -1290,7 +1369,7 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
         keyboardButtons.push([
           Markup.button.callback(
             '⬇️ Yuklab olish',
-            `get_${episodeId}`,
+            `epdl_${episodeId}`,
           ),
         ]);
       }
@@ -1708,12 +1787,12 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
           : '') +
         `\n━━━━━━━━━━━━━━━━━━━━━━━`;
 
-      const keyboard = Markup.inlineKeyboard([
-        result.spinsRemaining > 0
-          ? [Markup.button.callback('🎡 Yana aylantirish', 'spin_wheel')]
-          : [],
-        [Markup.button.callback('🏠 Bosh menyu', 'back_to_start')].filter(Boolean),
-      ]);
+      const keyboardRows: any[][] = [];
+      if (result.spinsRemaining > 0) {
+        keyboardRows.push([Markup.button.callback('🎡 Yana aylantirish', 'spin_wheel')]);
+      }
+      keyboardRows.push([Markup.button.callback('🏠 Bosh menyu', 'back_to_start')]);
+      const keyboard = Markup.inlineKeyboard(keyboardRows);
 
       await this.replyOrEdit(ctx, text, keyboard);
     } catch (error) {
@@ -1785,7 +1864,7 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
       `📅 12 oy — 199,000 UZS (-43%)\n` +
       `♾️ Umrbod — 499,000 UZS\n\n` +
       `━━━━━━━━━━━━━━━━━━━━━━━\n` +
-      `🔐 To\'lov uchun @CinemaHubAdmin ga yozing`;
+      `🔐 To\'lov uchun @shakh_041 ga yozing`;
 
     await this.replyOrEdit(ctx, text, this.backButton());
   }
