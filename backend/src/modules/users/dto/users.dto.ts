@@ -94,6 +94,26 @@ export class UserResponseDto {
   createdAt!: Date;
 }
 
+export class UserAchievementDto {
+  @ApiProperty()
+  id!: string;
+
+  @ApiProperty()
+  name!: string;
+
+  @ApiProperty()
+  description!: string;
+
+  @ApiProperty()
+  icon!: string;
+
+  @ApiProperty()
+  tier!: string;
+
+  @ApiProperty()
+  unlockedAt!: Date;
+}
+
 export class UserProfileDto {
   @ApiProperty()
   id!: string;
@@ -157,26 +177,6 @@ export class UserProfileDto {
 
   @ApiProperty()
   createdAt!: Date;
-}
-
-export class UserAchievementDto {
-  @ApiProperty()
-  id!: string;
-
-  @ApiProperty()
-  name!: string;
-
-  @ApiProperty()
-  description!: string;
-
-  @ApiProperty()
-  icon!: string;
-
-  @ApiProperty()
-  tier!: string;
-
-  @ApiProperty()
-  unlockedAt!: Date;
 }
 
 export class LeaderboardEntryDto {

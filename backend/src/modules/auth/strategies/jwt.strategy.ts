@@ -2,12 +2,10 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
-import { PrismaService } from '../../../prisma/prisma.service';
+import { PrismaService } from '../../../config/prisma.service';
 
 interface JwtPayload {
   sub: string;
-  email?: string;
-  username?: string;
   role?: string;
   iat: number;
   exp: number;
@@ -33,17 +31,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     const user = await this.prisma.user.findUnique({
       where: { id: payload.sub },
-      include: {
-        role: {
-          include: {
-            permissions: {
-              include: {
-                permission: true,
-              },
-            },
-          },
-        },
-      },
+      include: { role: { include: { permissions: true } } },
     });
 
     if (!user) {
@@ -55,7 +43,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     }
 
     const permissions = user.role?.permissions?.map(
-      (rp) => rp.permission.name,
+      (rp) => `${rp.resource}:${rp.action}`,
     ) ?? [];
 
     return {
@@ -64,7 +52,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       username: user.username,
       firstName: user.firstName,
       lastName: user.lastName,
-      photoUrl: user.photoUrl,
+      avatar: user.avatar,
       role: user.role?.name ?? 'user',
       permissions,
     };

@@ -99,7 +99,7 @@ export class NotificationsService {
         type: data.type,
         title: data.title,
         body: data.body ?? null,
-        data: data.metadata ?? Prisma.JsonNull,
+        data: (data.metadata as any) ?? Prisma.JsonNull,
       },
     });
 
@@ -137,7 +137,7 @@ export class NotificationsService {
       type: data.type,
       title: data.title,
       body: data.body ?? null,
-      data: data.metadata ?? Prisma.JsonNull,
+      data: (data.metadata as any) ?? Prisma.JsonNull,
     }));
 
     const batchSize = 500;

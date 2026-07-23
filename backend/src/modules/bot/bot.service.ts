@@ -100,12 +100,17 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
     this.registerTextHandler();
 
     try {
-      await this.bot.launch();
       this.botInfo = await this.bot.telegram.getMe();
-      this.logger.log(`Bot started: @${this.botInfo.username} (${this.botInfo.id})`);
+      this.logger.log(`Bot verified: @${this.botInfo.username} (${this.botInfo.id})`);
     } catch (error) {
-      this.logger.error(`Failed to start bot: ${error.message}`);
+      this.logger.error(`Failed to verify bot: ${error.message}`);
     }
+
+    this.bot.launch({ dropPendingUpdates: true }).then(() => {
+      this.logger.log(`Bot launched with long polling`);
+    }).catch((error) => {
+      this.logger.warn(`Bot launch failed (webhook mode available): ${error.message}`);
+    });
   }
 
   async onModuleDestroy() {
@@ -622,7 +627,7 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
         for (const s of series) {
           const rating = s.rating > 0 ? ` ⭐${s.rating.toFixed(1)}` : '';
           const year = s.year ? ` (${s.year})` : '';
-          const statusEmoji = s.status === 'completed' ? '✅' : '🔄';
+          const statusEmoji = (s as any).status === 'completed' ? '✅' : '🔄';
           text += `\n${statusEmoji} <b>#${s.code}</b> — ${this.escapeHtml(s.title)}${year}${rating}`;
           keyboardButtons.push([
             Markup.button.callback(
@@ -1129,7 +1134,7 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
 
       const buttons: any[][] = [];
 
-      const episodes = season.episodes || [];
+      const episodes = (season as any).episodes || [];
       for (const ep of episodes) {
         const duration = ep.duration ? ` (${ep.duration} min)` : '';
         text += `\n🎬 <b>${ep.number}.</b> ${this.escapeHtml(ep.title)}${duration}`;
@@ -1182,7 +1187,7 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
         return;
       }
 
-      const episode = (season.episodes || []).find(
+      const episode = ((season as any).episodes || []).find(
         (e: any) => e.number === episodeNumber,
       );
 

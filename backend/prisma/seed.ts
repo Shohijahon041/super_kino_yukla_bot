@@ -1,92 +1,111 @@
 import { PrismaClient } from '@prisma/client';
-import * as bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
 async function main() {
   console.log('🌱 Seeding database...');
 
-  // Roles
-  const superAdmin = await prisma.role.upsert({
+  // Create all unique permissions first
+  const allPerms: { resource: string; action: string }[] = [
+    { resource: 'movies', action: 'create' },
+    { resource: 'movies', action: 'read' },
+    { resource: 'movies', action: 'update' },
+    { resource: 'movies', action: 'delete' },
+    { resource: 'series', action: 'create' },
+    { resource: 'series', action: 'read' },
+    { resource: 'series', action: 'update' },
+    { resource: 'series', action: 'delete' },
+    { resource: 'users', action: 'read' },
+    { resource: 'users', action: 'update' },
+    { resource: 'users', action: 'delete' },
+    { resource: 'admin', action: 'dashboard' },
+    { resource: 'admin', action: 'broadcast' },
+    { resource: 'admin', action: 'import' },
+    { resource: 'admin', action: 'export' },
+    { resource: 'statistics', action: 'read' },
+  ];
+
+  for (const p of allPerms) {
+    await prisma.permission.upsert({
+      where: { resource_action: { resource: p.resource, action: p.action } },
+      update: {},
+      create: p,
+    });
+  }
+  console.log('✅ Permissions created');
+
+  async function getPermIds(pairs: [string, string][]) {
+    const ids: { id: string }[] = [];
+    for (const [resource, action] of pairs) {
+      const perm = await prisma.permission.findUnique({
+        where: { resource_action: { resource, action } },
+      });
+      if (perm) ids.push({ id: perm.id });
+    }
+    return ids;
+  }
+
+  const superAdminPerms = await getPermIds([
+    ['movies', 'create'], ['movies', 'read'], ['movies', 'update'], ['movies', 'delete'],
+    ['series', 'create'], ['series', 'read'], ['series', 'update'], ['series', 'delete'],
+    ['users', 'read'], ['users', 'update'], ['users', 'delete'],
+    ['admin', 'dashboard'], ['admin', 'broadcast'], ['admin', 'import'], ['admin', 'export'],
+    ['statistics', 'read'],
+  ]);
+
+  await prisma.role.upsert({
     where: { name: 'super_admin' },
     update: {},
     create: {
       name: 'super_admin',
       description: 'Super Administrator with full access',
-      permissions: {
-        create: [
-          { resource: 'movies', action: 'create' },
-          { resource: 'movies', action: 'read' },
-          { resource: 'movies', action: 'update' },
-          { resource: 'movies', action: 'delete' },
-          { resource: 'series', action: 'create' },
-          { resource: 'series', action: 'read' },
-          { resource: 'series', action: 'update' },
-          { resource: 'series', action: 'delete' },
-          { resource: 'users', action: 'read' },
-          { resource: 'users', action: 'update' },
-          { resource: 'users', action: 'delete' },
-          { resource: 'admin', action: 'dashboard' },
-          { resource: 'admin', action: 'broadcast' },
-          { resource: 'admin', action: 'import' },
-          { resource: 'admin', action: 'export' },
-          { resource: 'statistics', action: 'read' },
-        ],
-      },
+      permissions: { connect: superAdminPerms },
     },
   });
 
-  const admin = await prisma.role.upsert({
+  const adminPerms = await getPermIds([
+    ['movies', 'create'], ['movies', 'read'], ['movies', 'update'],
+    ['series', 'create'], ['series', 'read'], ['series', 'update'],
+    ['users', 'read'], ['admin', 'dashboard'],
+  ]);
+
+  await prisma.role.upsert({
     where: { name: 'admin' },
     update: {},
     create: {
       name: 'admin',
       description: 'Administrator',
-      permissions: {
-        create: [
-          { resource: 'movies', action: 'create' },
-          { resource: 'movies', action: 'read' },
-          { resource: 'movies', action: 'update' },
-          { resource: 'series', action: 'create' },
-          { resource: 'series', action: 'read' },
-          { resource: 'series', action: 'update' },
-          { resource: 'users', action: 'read' },
-          { resource: 'admin', action: 'dashboard' },
-        ],
-      },
+      permissions: { connect: adminPerms },
     },
   });
 
-  const moderator = await prisma.role.upsert({
+  const modPerms = await getPermIds([
+    ['movies', 'read'], ['movies', 'update'],
+    ['series', 'read'], ['series', 'update'],
+    ['users', 'read'],
+  ]);
+
+  await prisma.role.upsert({
     where: { name: 'moderator' },
     update: {},
     create: {
       name: 'moderator',
       description: 'Moderator',
-      permissions: {
-        create: [
-          { resource: 'movies', action: 'read' },
-          { resource: 'movies', action: 'update' },
-          { resource: 'series', action: 'read' },
-          { resource: 'series', action: 'update' },
-          { resource: 'users', action: 'read' },
-        ],
-      },
+      permissions: { connect: modPerms },
     },
   });
 
-  const user = await prisma.role.upsert({
+  const userPerms = await getPermIds([
+    ['movies', 'read'], ['series', 'read'],
+  ]);
+
+  await prisma.role.upsert({
     where: { name: 'user' },
     update: {},
     create: {
       name: 'user',
       description: 'Regular user',
-      permissions: {
-        create: [
-          { resource: 'movies', action: 'read' },
-          { resource: 'series', action: 'read' },
-        ],
-      },
+      permissions: { connect: userPerms },
     },
   });
 
@@ -204,7 +223,7 @@ async function main() {
     { name: '5 ta qidiruv', description: '5 ta film qidiring', type: 'daily', target: 5, reward: 50, coinReward: 50, icon: '🔍' },
     { name: '1 ta izoh yozing', description: '1 ta filmga izoh yozing', type: 'daily', target: 1, reward: 100, coinReward: 100, icon: '💬' },
     { name: 'Haftalik 20 ta film', description: '20 ta film tomosha qiling', type: 'weekly', target: 20, reward: 500, coinReward: 1000, icon: '🏆' },
-    { name: 'Do\'st taklif qiling', description: '1 ta do\'st taklif qiling', type: 'weekly', target: 1, reward: 300, coinReward: 500, icon: '👥' },
+    { name: "Do'st taklif qiling", description: "1 ta do'st taklif qiling", type: 'weekly', target: 1, reward: 300, coinReward: 500, icon: '👥' },
     { name: '7 kunlik streak', description: '7 kun ketma-ket bonus oling', type: 'special', target: 7, reward: 1000, coinReward: 2000, icon: '🔥' },
   ];
 
@@ -218,18 +237,18 @@ async function main() {
 
   // Achievements
   const achievements = [
-    { name: 'Boshlang\'ich', description: 'Platformaga qo\'shiling', icon: '🌟', tier: 'bronze', xpReward: 100, coinReward: 50, condition: { type: 'join', value: 1 } },
+    { name: "Boshlang'ich", description: "Platformaga qo'shiling", icon: '🌟', tier: 'bronze', xpReward: 100, coinReward: 50, condition: { type: 'join', value: 1 } },
     { name: 'Film sevuvchi', description: '10 ta film tomosha qiling', icon: '🎬', tier: 'bronze', xpReward: 200, coinReward: 100, condition: { type: 'watch_count', value: 10 } },
     { name: 'Kino mutaxassisi', description: '100 ta film tomosha qiling', icon: '🎓', tier: 'silver', xpReward: 1000, coinReward: 500, condition: { type: 'watch_count', value: 100 } },
     { name: 'Kinoshun', description: '500 ta film tomosha qiling', icon: '👑', tier: 'gold', xpReward: 5000, coinReward: 2500, condition: { type: 'watch_count', value: 500 } },
     { name: 'Kinoguru', description: '1000 ta film tomosha qiling', icon: '🏆', tier: 'platinum', xpReward: 10000, coinReward: 5000, condition: { type: 'watch_count', value: 1000 } },
     { name: 'Izohchi', description: '10 ta izoh yozing', icon: '💬', tier: 'bronze', xpReward: 300, coinReward: 150, condition: { type: 'reviews_count', value: 10 } },
     { name: 'Kollektsioner', description: '5 ta kolleksiya yarating', icon: '📦', tier: 'silver', xpReward: 500, coinReward: 250, condition: { type: 'collections_count', value: 5 } },
-    { name: 'Tavsiyachi', description: '5 ta do\'st taklif qiling', icon: '👥', tier: 'silver', xpReward: 1000, coinReward: 500, condition: { type: 'referral_count', value: 5 } },
+    { name: "Tavsiyachi", description: "5 ta do'st taklif qiling", icon: '👥', tier: 'silver', xpReward: 1000, coinReward: 500, condition: { type: 'referral_count', value: 5 } },
     { name: 'Daraja 10', description: '10-darajaga yeting', icon: '📈', tier: 'gold', xpReward: 2000, coinReward: 1000, condition: { type: 'level', value: 10 } },
     { name: 'Daraja 50', description: '50-darajaga yeting', icon: '🚀', tier: 'platinum', xpReward: 10000, coinReward: 5000, condition: { type: 'level', value: 50 } },
     { name: 'Streak ustasi', description: '30 kunlik streak', icon: '🔥', tier: 'gold', xpReward: 3000, coinReward: 1500, condition: { type: 'streak', value: 30 } },
-    { name: 'Premium a\'zo', description: 'Premium a\'zo bo\'ling', icon: '💎', tier: 'platinum', xpReward: 5000, coinReward: 2500, condition: { type: 'premium', value: 1 } },
+    { name: "Premium a'zo", description: "Premium a'zo bo'ling", icon: '💎', tier: 'platinum', xpReward: 5000, coinReward: 2500, condition: { type: 'premium', value: 1 } },
   ];
 
   for (const ach of achievements) {

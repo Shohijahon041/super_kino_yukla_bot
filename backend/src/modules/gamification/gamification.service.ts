@@ -130,7 +130,14 @@ export class GamificationService {
               metadata: { missionId },
             },
           })
-        : Promise.resolve(null),
+        : this.prisma.coinsLog.create({
+            data: {
+              userId,
+              amount: 0,
+              reason: `mission:${mission.name}`,
+              metadata: { missionId },
+            },
+          }),
     ]);
 
     return {
@@ -166,7 +173,6 @@ export class GamificationService {
 
   async getAllAchievements(userId: string) {
     const achievements = await this.prisma.achievement.findMany({
-      where: { isActive: true },
       orderBy: [{ tier: 'asc' }, { name: 'asc' }],
     });
 

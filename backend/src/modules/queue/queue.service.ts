@@ -69,7 +69,7 @@ export interface JobStatusResponse {
 export class QueueService {
   private readonly logger = new Logger(QueueService.name);
   private readonly queues: Map<string, Queue> = new Map();
-  private readonly connection: Redis.RedisOptions;
+  private readonly connection: any;
 
   constructor(private readonly config: ConfigService) {
     this.connection = {

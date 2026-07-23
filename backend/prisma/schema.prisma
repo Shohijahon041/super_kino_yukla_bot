@@ -1,12 +1,10 @@
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
   provider   = "postgresql"
   url        = env("DATABASE_URL")
-  extensions = [uuid_ossp, pgcrypto]
 }
 
 // ============ ROLES & PERMISSIONS ============
@@ -56,26 +54,33 @@ model User {
   coins         Int            @default(0)
   referralCode  String         @unique @default(uuid())
   referredById  String?
-  referredBy    User?          @relation("Referrals", fields: [referredById], references: [id])
-  referrals     User[]         @relation("Referrals")
+  referredBy    User?          @relation("UserReferral", fields: [referredById], references: [id])
+  referrals     User[]         @relation("UserReferral")
+  referralAsReferrer Referral[] @relation("ReferralReferrer")
+  referralAsReferred Referral[] @relation("ReferralReferred")
   lastDailyBonus DateTime?
   lastCheckIn   DateTime?
   streakCount   Int            @default(0)
   
-  favorites     Favorite[]
-  watchHistory  WatchHistory[]
-  reviews       Review[]
-  reactions     Reaction[]
-  collections   Collection[]
-  downloads     Download[]
-  notifications Notification[]
-  watchParty    WatchPartyParticipant[]
-  missions      UserMission[]
-  achievements  UserAchievement[]
-  coinsLog      CoinsLog[]
-  loginHistory  LoginHistory[]
-  sessions      UserSession[]
-  stats         UserStatistic[]
+  favorites       Favorite[]
+  watchHistory    WatchHistory[]
+  reviews         Review[]
+  reactions       Reaction[]
+  collections     Collection[]
+  downloads       Download[]
+  notifications   Notification[]
+  watchParty      WatchPartyParticipant[]
+  missions        UserMission[]
+  achievements    UserAchievement[]
+  coinsLog        CoinsLog[]
+  loginHistory    LoginHistory[]
+  sessions        UserSession[]
+  stats           UserStatistic[]
+  subscriptions   Subscription[]
+  payments        Payment[]
+  adminActions    AdminAction[]
+  reports         Report[]
+  broadcasts      Broadcast[]
   
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
@@ -138,6 +143,8 @@ model Movie {
   downloads       Download[]
   subtitles       Subtitle[]
   tags            MovieTag[]
+  watchParties    WatchParty[]
+  reports         Report[]
   
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
@@ -186,6 +193,8 @@ model Series {
   watchHistory    WatchHistory[]
   reviews         Review[]
   reactions       Reaction[]
+  watchParties    WatchParty[]
+  reports         Report[]
   
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
@@ -560,9 +569,9 @@ model Payment {
 model Referral {
   id            String   @id @default(uuid())
   referrerId    String
-  referrer      User     @relation(fields: [referrerId], references: [id], onDelete: Cascade)
+  referrer      User     @relation("ReferralReferrer", fields: [referrerId], references: [id], onDelete: Cascade)
   referredId    String
-  referred      User     @relation(fields: [referredId], references: [id], onDelete: Cascade)
+  referred      User     @relation("ReferralReferred", fields: [referredId], references: [id], onDelete: Cascade)
   reward        Int      @default(100)
   status        String   @default("pending") // pending, completed
   createdAt     DateTime @default(now())
@@ -785,6 +794,7 @@ model AdminAction {
 model Broadcast {
   id         String   @id @default(uuid())
   adminId    String
+  admin      User     @relation(fields: [adminId], references: [id], onDelete: Cascade)
   title      String
   message    String
   mediaUrl   String?

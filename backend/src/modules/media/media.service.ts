@@ -5,7 +5,7 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as sharp from 'sharp';
+import sharp from 'sharp';
 import * as Minio from 'minio';
 import { v4 as uuid } from 'uuid';
 import { execFile } from 'child_process';
@@ -117,9 +117,6 @@ export class MediaService {
 
     const ext = this.getExtension(originalName, mimeType);
     const key = `${folder}/${uuid()}.${ext}`;
-
-    const metadata = new Minio.ItemMetadata();
-    metadata['Content-Type'] = mimeType;
 
     await this.minioClient.putObject(this.bucket, key, buffer, buffer.length, {
       'Content-Type': mimeType,
@@ -371,9 +368,9 @@ export class MediaService {
       stream.on('data', (obj) => {
         if (files.length < maxKeys) {
           files.push({
-            key: obj.name,
-            size: obj.size,
-            lastModified: obj.lastModified,
+            key: obj.name!,
+            size: obj.size!,
+            lastModified: obj.lastModified!,
           });
         }
       });

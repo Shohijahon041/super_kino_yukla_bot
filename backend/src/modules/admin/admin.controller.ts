@@ -65,7 +65,6 @@ export class AdminController {
     required: false,
     enum: ['day', 'week', 'month'],
     description: 'Analytics period',
-    default: 'week',
   })
   @ApiResponse({ status: 200, description: 'Analytics data retrieved successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })

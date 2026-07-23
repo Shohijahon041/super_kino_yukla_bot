@@ -24,9 +24,7 @@ export class UsersService {
       include: {
         role: {
           include: {
-            permissions: {
-              include: { permission: true },
-            },
+            permissions: true,
           },
         },
       },
@@ -39,9 +37,7 @@ export class UsersService {
       include: {
         role: {
           include: {
-            permissions: {
-              include: { permission: true },
-            },
+            permissions: true,
           },
         },
       },
@@ -72,7 +68,11 @@ export class UsersService {
         roleId: data.roleId,
       },
       include: {
-        role: true,
+        role: {
+          include: {
+            permissions: true,
+          },
+        },
       },
     });
   }
@@ -621,9 +621,7 @@ export class UsersService {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) return;
 
-    const achievements = await this.prisma.achievement.findMany({
-      where: { isActive: true },
-    });
+    const achievements = await this.prisma.achievement.findMany({});
 
     for (const achievement of achievements) {
       const condition = achievement.condition as Record<string, unknown>;

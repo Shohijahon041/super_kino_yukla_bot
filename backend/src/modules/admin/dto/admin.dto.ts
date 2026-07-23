@@ -71,7 +71,7 @@ export class GetBroadcastHistoryDto {
   limit?: number = 20;
 
   get skip(): number {
-    return (this.page - 1) * this.limit;
+    return ((this.page ?? 1) - 1) * (this.limit ?? 20);
   }
 }
 
@@ -229,7 +229,7 @@ export class GetAdminActionsDto {
   targetType?: string;
 
   get skip(): number {
-    return (this.page - 1) * this.limit;
+    return ((this.page ?? 1) - 1) * (this.limit ?? 50);
   }
 }
 

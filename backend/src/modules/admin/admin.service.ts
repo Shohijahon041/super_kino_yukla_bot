@@ -74,12 +74,8 @@ export class AdminService {
     const countryIds = topCountries.map((c) => c.countryId);
 
     const [genreRecords, countryRecords] = await Promise.all([
-      genreIds.length > 0
-        ? this.prisma.genre.findMany({ where: { id: { in: genreIds } } })
-        : [],
-      countryIds.length > 0
-        ? this.prisma.country.findMany({ where: { id: { in: countryIds } } })
-        : [],
+      this.prisma.genre.findMany({ where: { id: { in: genreIds } } }),
+      this.prisma.country.findMany({ where: { id: { in: countryIds } } }),
     ]);
 
     const genreMap = new Map(genreRecords.map((g) => [g.id, g]));
@@ -201,11 +197,7 @@ export class AdminService {
     ]);
 
     const genreIds = genreDistribution.map((g) => g.genreId);
-    const genreRecords =
-      genreIds.length > 0
-        ? this.prisma.genre.findMany({ where: { id: { in: genreIds } } })
-        : [];
-    const resolvedGenres = await genreRecords;
+    const resolvedGenres = await this.prisma.genre.findMany({ where: { id: { in: genreIds } } });
     const genreMap = new Map(resolvedGenres.map((g) => [g.id, g]));
 
     return {
@@ -306,7 +298,7 @@ export class AdminService {
       this.prisma.broadcast.count({ where }),
     ]);
 
-    return new PaginatedResponse(data, total, dto.page, dto.limit);
+    return new PaginatedResponse(data, total, dto.page ?? 1, dto.limit ?? 20);
   }
 
   async bulkImportMovies(movies: BulkImportMovieDto[], adminId: string) {
@@ -499,7 +491,7 @@ export class AdminService {
       this.prisma.adminAction.count({ where }),
     ]);
 
-    return new PaginatedResponse(data, total, dto.page, dto.limit);
+    return new PaginatedResponse(data, total, dto.page ?? 1, dto.limit ?? 50);
   }
 
   async getSystemHealth() {

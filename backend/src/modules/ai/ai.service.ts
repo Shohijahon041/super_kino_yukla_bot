@@ -2,6 +2,40 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../config/prisma.service';
 
+export interface ScoredResult {
+  item: any;
+  type: 'movie' | 'series';
+  score: number;
+}
+
+export interface TrendingMovie {
+  id: string;
+  title: string;
+  slug: string;
+  poster: string | null;
+  year: number | null;
+  rating: number;
+  totalViews: number;
+  recentViews: number;
+  velocity: number;
+  trendScore: number;
+  trendDirection: 'rising' | 'stable' | 'declining';
+}
+
+export interface TrendingSeries {
+  id: string;
+  title: string;
+  slug: string;
+  poster: string | null;
+  year: number | null;
+  rating: number;
+  totalViews: number;
+  recentViews: number;
+  velocity: number;
+  trendScore: number;
+  trendDirection: 'rising' | 'stable' | 'declining';
+}
+
 const MOOD_GENRE_MAP: Record<string, string[]> = {
   scary: ['xorror', 'horror', 'qo\'rqinchli', 'ужас', '恐怖'],
   funny: ['komediya', 'comedy', 'kulgili', 'комедия', '喜剧'],
@@ -747,12 +781,6 @@ export class AIService {
       }),
     ]);
 
-    interface ScoredResult {
-      item: any;
-      type: 'movie' | 'series';
-      score: number;
-    }
-
     const scored: ScoredResult[] = [];
 
     for (const movie of movies) {
@@ -1082,20 +1110,6 @@ export class AIService {
       recentMap.set(m.id, m.viewCount);
     }
 
-    interface TrendingMovie {
-      id: string;
-      title: string;
-      slug: string;
-      poster: string | null;
-      year: number | null;
-      rating: number;
-      totalViews: number;
-      recentViews: number;
-      velocity: number;
-      trendScore: number;
-      trendDirection: 'rising' | 'stable' | 'declining';
-    }
-
     const trending: TrendingMovie[] = [];
 
     for (const movie of recentMovies) {
@@ -1179,20 +1193,6 @@ export class AIService {
     const recentSeriesMap = new Map<string, number>();
     for (const s of recentSeries) {
       recentSeriesMap.set(s.id, s.viewCount);
-    }
-
-    interface TrendingSeries {
-      id: string;
-      title: string;
-      slug: string;
-      poster: string | null;
-      year: number | null;
-      rating: number;
-      totalViews: number;
-      recentViews: number;
-      velocity: number;
-      trendScore: number;
-      trendDirection: 'rising' | 'stable' | 'declining';
     }
 
     const trendingSeries: TrendingSeries[] = [];

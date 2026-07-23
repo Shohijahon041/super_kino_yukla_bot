@@ -11,10 +11,11 @@ export class TelegramStrategy extends PassportStrategy(Strategy, 'telegram') {
 
   constructor(configService: ConfigService) {
     super();
-    this.botToken = configService.get<string>('TELEGRAM_BOT_TOKEN');
-    if (!this.botToken) {
+    const token = configService.get<string>('TELEGRAM_BOT_TOKEN');
+    if (!token) {
       throw new Error('TELEGRAM_BOT_TOKEN is not configured');
     }
+    this.botToken = token;
   }
 
   async validate(req: { body: TelegramLoginDto }): Promise<TelegramLoginDto> {

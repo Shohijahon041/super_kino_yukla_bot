@@ -1,31 +1,18 @@
 import { Injectable, UnauthorizedException, ForbiddenException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '../../config/prisma.service';
 import { TelegramLoginDto } from './dto/auth.dto';
 import * as crypto from 'crypto';
 
 interface JwtPayload {
   sub: string;
-  email?: string;
-  username?: string;
   role?: string;
 }
 
 interface TokenPair {
   accessToken: string;
   refreshToken: string;
-}
-
-interface SessionInfo {
-  id: string;
-  userId: string;
-  refreshTokenHash: string;
-  ipAddress: string | null;
-  userAgent: string | null;
-  isActive: boolean;
-  createdAt: Date;
-  expiresAt: Date;
 }
 
 @Injectable()
@@ -79,21 +66,11 @@ export class AuthService {
   ): Promise<TokenPair & { user: any }> {
     await this.validateTelegramAuth(telegramData);
 
-    const telegramId = String(telegramData.id);
+    const telegramId = BigInt(telegramData.id);
 
     let user = await this.prisma.user.findUnique({
       where: { telegramId },
-      include: {
-        role: {
-          include: {
-            permissions: {
-              include: {
-                permission: true,
-              },
-            },
-          },
-        },
-      },
+      include: { role: { include: { permissions: true } } },
     });
 
     if (user && user.isBanned) {
@@ -103,13 +80,7 @@ export class AuthService {
     if (!user) {
       const defaultRole = await this.prisma.role.findUnique({
         where: { name: 'user' },
-        include: {
-          permissions: {
-            include: {
-              permission: true,
-            },
-          },
-        },
+        include: { permissions: true },
       });
 
       if (!defaultRole) {
@@ -122,20 +93,10 @@ export class AuthService {
           username: telegramData.username ?? null,
           firstName: telegramData.first_name ?? null,
           lastName: telegramData.last_name ?? null,
-          photoUrl: telegramData.photo_url ?? null,
+          avatar: telegramData.photo_url ?? null,
           roleId: defaultRole.id,
         },
-        include: {
-          role: {
-            include: {
-              permissions: {
-                include: {
-                  permission: true,
-                },
-              },
-            },
-          },
-        },
+        include: { role: { include: { permissions: true } } },
       });
     } else {
       user = await this.prisma.user.update({
@@ -144,28 +105,16 @@ export class AuthService {
           username: telegramData.username ?? user.username,
           firstName: telegramData.first_name ?? user.firstName,
           lastName: telegramData.last_name ?? user.lastName,
-          photoUrl: telegramData.photo_url ?? user.photoUrl,
-          lastLoginAt: new Date(),
+          avatar: telegramData.photo_url ?? user.avatar,
         },
-        include: {
-          role: {
-            include: {
-              permissions: {
-                include: {
-                  permission: true,
-                },
-              },
-            },
-          },
-        },
+        include: { role: { include: { permissions: true } } },
       });
     }
 
     const tokens = await this.generateTokenPair(user.id, user.role?.name ?? 'user');
-
     await this.createSession(user.id, tokens.refreshToken, ipAddress, userAgent);
 
-    const permissions = user.role?.permissions?.map((rp) => rp.permission.name) ?? [];
+    const permissions = user.role?.permissions?.map((rp) => `${rp.resource}:${rp.action}`) ?? [];
 
     return {
       accessToken: tokens.accessToken,
@@ -176,7 +125,7 @@ export class AuthService {
         username: user.username,
         firstName: user.firstName,
         lastName: user.lastName,
-        photoUrl: user.photoUrl,
+        avatar: user.avatar,
         role: user.role?.name ?? 'user',
         permissions,
         createdAt: user.createdAt,
@@ -190,23 +139,15 @@ export class AuthService {
     ipAddress?: string,
     userAgent?: string,
   ): Promise<TokenPair> {
-    const tokenHash = this.hashToken(refreshToken);
-
-    const session = await this.prisma.session.findFirst({
+    const session = await this.prisma.userSession.findFirst({
       where: {
-        refreshTokenHash: tokenHash,
+        refreshToken,
         isActive: true,
         expiresAt: { gt: new Date() },
       },
       include: {
         user: {
-          include: {
-            role: {
-              include: {
-                permissions: true,
-              },
-            },
-          },
+          include: { role: true },
         },
       },
     });
@@ -227,12 +168,7 @@ export class AuthService {
       session.user.role?.name ?? 'user',
     );
 
-    await this.createSession(
-      session.userId,
-      tokens.refreshToken,
-      ipAddress ?? session.ipAddress,
-      userAgent ?? session.userAgent,
-    );
+    await this.createSession(session.userId, tokens.refreshToken, ipAddress, userAgent);
 
     return tokens;
   }
@@ -243,7 +179,7 @@ export class AuthService {
       whereClause.userId = userId;
     }
 
-    const session = await this.prisma.session.findFirst({
+    const session = await this.prisma.userSession.findFirst({
       where: whereClause,
     });
 
@@ -251,7 +187,7 @@ export class AuthService {
       throw new UnauthorizedException('Session not found');
     }
 
-    await this.prisma.session.update({
+    await this.prisma.userSession.update({
       where: { id: session.id },
       data: { isActive: false },
     });
@@ -260,7 +196,7 @@ export class AuthService {
   }
 
   async logoutAllSessions(userId: string): Promise<{ message: string; count: number }> {
-    const result = await this.prisma.session.updateMany({
+    const result = await this.prisma.userSession.updateMany({
       where: {
         userId,
         isActive: true,
@@ -279,17 +215,7 @@ export class AuthService {
   async getProfile(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      include: {
-        role: {
-          include: {
-            permissions: {
-              include: {
-                permission: true,
-              },
-            },
-          },
-        },
-      },
+      include: { role: { include: { permissions: true } } },
     });
 
     if (!user) {
@@ -300,7 +226,7 @@ export class AuthService {
       throw new ForbiddenException('Your account has been banned');
     }
 
-    const permissions = user.role?.permissions?.map((rp) => rp.permission.name) ?? [];
+    const permissions = user.role?.permissions?.map((rp) => `${rp.resource}:${rp.action}`) ?? [];
 
     return {
       id: user.id,
@@ -308,7 +234,7 @@ export class AuthService {
       username: user.username,
       firstName: user.firstName,
       lastName: user.lastName,
-      photoUrl: user.photoUrl,
+      avatar: user.avatar,
       role: user.role?.name ?? 'user',
       permissions,
       createdAt: user.createdAt,
@@ -316,8 +242,8 @@ export class AuthService {
     };
   }
 
-  async getUserSessions(userId: string): Promise<SessionInfo[]> {
-    return this.prisma.session.findMany({
+  async getUserSessions(userId: string) {
+    return this.prisma.userSession.findMany({
       where: {
         userId,
         isActive: true,
@@ -326,9 +252,9 @@ export class AuthService {
       select: {
         id: true,
         userId: true,
-        refreshTokenHash: true,
-        ipAddress: true,
-        userAgent: true,
+        token: true,
+        ip: true,
+        device: true,
         isActive: true,
         createdAt: true,
         expiresAt: true,
@@ -342,16 +268,16 @@ export class AuthService {
     ipAddress?: string,
     userAgent?: string,
   ): Promise<any> {
-    const refreshTokenHash = this.hashToken(refreshToken);
     const refreshExpiresIn = this.configService.get<string>('JWT_REFRESH_EXPIRES_IN', '7d');
     const expiresAt = this.calculateExpiry(refreshExpiresIn);
 
-    return this.prisma.session.create({
+    return this.prisma.userSession.create({
       data: {
         userId,
-        refreshTokenHash,
-        ipAddress: ipAddress ?? null,
-        userAgent: userAgent ?? null,
+        token: refreshToken,
+        refreshToken,
+        ip: ipAddress ?? null,
+        device: userAgent ?? null,
         isActive: true,
         expiresAt,
       },
@@ -369,21 +295,12 @@ export class AuthService {
 
     const accessToken = this.jwtService.sign(payload);
 
-    const refreshPayload: JwtPayload = {
-      sub: userId,
-      role: roleName,
-    };
-
     const refreshExpiresIn = this.configService.get<string>('JWT_REFRESH_EXPIRES_IN', '7d');
-    const refreshToken = this.jwtService.sign(refreshPayload, {
+    const refreshToken = this.jwtService.sign(payload, {
       expiresIn: refreshExpiresIn,
     });
 
     return { accessToken, refreshToken };
-  }
-
-  private hashToken(token: string): string {
-    return crypto.createHash('sha256').update(token).digest('hex');
   }
 
   private calculateExpiry(duration: string): Date {
@@ -408,7 +325,7 @@ export class AuthService {
   }
 
   private async deactivateSession(sessionId: string): Promise<void> {
-    await this.prisma.session.update({
+    await this.prisma.userSession.update({
       where: { id: sessionId },
       data: { isActive: false },
     });
